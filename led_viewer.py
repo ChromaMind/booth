@@ -692,13 +692,13 @@ class LEDVisualizer(QWidget):
         edge_ratio = edge_leds / max(1, active_leds)
         
         # Calculate blink interval based on tempo and mood
-        base_interval = max(20, min(100, int(60000 / tempo)))  # BPM to ms, max 100ms
+        base_interval = max(20, min(50, int(60000 / tempo)))  # BPM to ms, max 100ms
         mood_factor = 0.5 + mood_intensity * 1.5  # 0.5x to 2.0x
         blink_interval = int(base_interval * mood_factor)
-        blink_interval = min(100, blink_interval)  # Ensure maximum 100ms
+        blink_interval = min(50, blink_interval)  # Ensure maximum 100ms
         
-        # Calculate brightness (0-255)
-        brightness = int(min(255, avg_brightness * 255 / 30))
+        # Calculate brightness (0-20 for safer brain entrainment)
+        brightness = int(min(20, avg_brightness * 20 / 30))
         
         # Determine mode based on pattern characteristics
         if activity_ratio > 0.8:
