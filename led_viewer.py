@@ -13,6 +13,8 @@ import threading
 import time
 import librosa
 import websocket
+import math
+from patterns import * 
 
 ESP32_WS_URL = "ws://10.151.240.37:81"
 
@@ -145,7 +147,6 @@ class LEDVisualizer(QWidget):
 
         self.audio_loaded = True
         self.update()
-
     def generate_led_frames_at_beats(self, file_path):
         print(f"Loading audio file: {file_path}")
         y, sr = librosa.load(file_path, sr=None)  # native sample rate
@@ -163,23 +164,73 @@ class LEDVisualizer(QWidget):
         beat_times = librosa.frames_to_time(beat_frames, sr=sr)  # seconds
         beat_times_ms = [int(x) for x in (beat_times * 1000)]  # milliseconds as int
 
+        num_beats = len(beat_times_ms)
         self.frames = []
-        for t_ms in beat_times_ms:
-            frame = [
-                [{"r": random.randint(0, 255),
-                  "g": random.randint(0, 255),
-                  "b": random.randint(0, 255),
-                  'a': random.randint(0, 255)}
-                 for _ in range(LED_COLS)]
-                for _ in range(LED_ROWS)
-            ]
-            self.frames.append({
-                "time": t_ms,
-                "leds": frame
-            })
+
+        # Collect all pattern function names defined in patterns.py except helper hsv_to_rgb
+        pattern_funcs = [
+            pattern_wave_vertical,
+            pattern_zigzag,
+            pattern_strobe_random,
+            pattern_spiral,
+            pattern_gradient_rainbow,
+            pattern_bouncing_dot,
+            pattern_fading_left_to_right,
+            pattern_fading_right_to_left,
+            pattern_alternating_rows,
+            pattern_checkerboard,
+            pattern_fading_center_out,
+            pattern_snake,
+            pattern_flashing_all,
+            pattern_cylon,
+            pattern_vertical_bars,
+            pattern_horizontal_bars,
+            pattern_diagonal_wave,
+            pattern_random_pulses,
+        ]
+
+        frames_per_beat = 4  # animation frames per beat
+
+        for i, t_ms in enumerate(beat_times_ms):
+            progress = i / max(1, num_beats - 1)
+
+            # Brightness scale ramp
+            if progress < 0.2:
+                brightness_scale = 0.2 + 0.4 * (progress / 0.2)
+            elif progress > 0.8:
+                brightness_scale = 0.6 - 0.4 * ((progress - 0.8) / 0.2)
+            else:
+                brightness_scale = 0.6 + 0.4 * random.random()
+
+            pattern_func = pattern_funcs[i % len(pattern_funcs)]
+
+            for step in range(frames_per_beat):
+                frame_leds = pattern_func(step, brightness_scale)
+
+                next_beat_ms = beat_times_ms[min(i + 1, num_beats - 1)]
+                frame_time = t_ms + int((step / frames_per_beat) * (next_beat_ms - t_ms))
+
+                self.frames.append({
+                    "time": frame_time,
+                    "leds": frame_leds
+                })
+
+            # Insert off frame with jitter except after last beat
+            if i < num_beats - 1:
+                off_frame = [
+                    [{"r": 0, "g": 0, "b": 0, "a": 0} for _ in range(LED_COLS)]
+                    for _ in range(LED_ROWS)
+                ]
+                next_t_ms = beat_times_ms[i + 1]
+                base_off_time = t_ms + (next_t_ms - t_ms) // 2
+                jitter = random.randint(-50, 50)
+                off_time = max(t_ms + 10, base_off_time + jitter)
+                self.frames.append({
+                    "time": off_time,
+                    "leds": off_frame
+                })
 
         self.total_duration_ms = beat_times_ms[-1] if beat_times_ms else 0
-
     def on_stream_clicked(self):
         if not self.frames:
             self.label.setText("No frames to stream.")
@@ -193,7 +244,7 @@ class LEDVisualizer(QWidget):
         self.stream_button.setText("Stop Streaming")
         arduino_url = "http://192.168.4.1/ledframes"  # Change to your device's IP
 
-        self.start_streaming_frames(arduino_url, chunk_size=10)
+        self.start_streaming_frames(arduino_url, chunk_size=5)
 
     def toggle_play(self):
         if not self.audio_loaded:
@@ -337,7 +388,7 @@ class LEDVisualizer(QWidget):
         except Exception as e:
             self.label.setText(f"Error saving frames: {e}")
 
-    def start_streaming_frames(self, url, chunk_size=10):
+    def start_streaming_frames(self, url, chunk_size=5):
         print("Starting to stream frames to device...")
         print("Connecting to WebSocket...")
         ws = websocket.create_connection(ESP32_WS_URL)
@@ -358,12 +409,14 @@ class LEDVisualizer(QWidget):
                 chunk_size = len(self.frames) - i
 
             frames = self.frames[i:i+chunk_size]
+            print(len(frames), "frames to send")
 
             if not frames:
                 print("No frames to send.")
                 return
             send_frames(frames)
-            time.sleep(0.2)
+            chunk_duration = (60 / self.tempo) * chunk_size / self.playback_speed
+            time.sleep(chunk_duration * 0.8)
 
         ws.close()
 
