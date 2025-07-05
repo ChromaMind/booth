@@ -439,6 +439,7 @@ class LEDVisualizer(QWidget):
         ]
 
         self.frames = []
+        self.frame_moods = []  # Store mood data for each frame
         pattern_change_interval = 30  # Change pattern every 30 frames (0.6s at 50fps)
         current_pattern_func = random.choice(brain_patterns)
         current_frequency_type = 'alpha'  # Default brain frequency
@@ -467,6 +468,7 @@ class LEDVisualizer(QWidget):
 
             # Get current mood intensity
             current_mood = mood_intensity[min(t_idx, len(mood_intensity)-1)]
+            self.frame_moods.append(current_mood)  # Store mood for this frame
 
             step = t_idx % 16  # Pattern animation steps
 
@@ -491,15 +493,15 @@ class LEDVisualizer(QWidget):
                 # Original patterns
                 frame_leds = current_pattern_func(step, brightness)
 
-            # Add blinking rate to each LED
-            for row_idx, row in enumerate(frame_leds):
-                for col_idx, led in enumerate(row):
-                    blinking_rate = self.calculate_led_blinking_rate(led, t_idx, current_mood, row_idx, col_idx)
-                    led["blink_rate_hz"] = blinking_rate
+            # Calculate Arduino mode for this frame
+            mode, blink_interval, brightness = self.calculate_arduino_mode(frame_leds, t_idx, current_mood, tempo)
             
+            # Store simplified frame data with only mode information
             self.frames.append({
                 "time": int(times_ms[t_idx]),
-                "leds": frame_leds
+                "mode": mode,
+                "blink_interval": blink_interval,
+                "brightness": brightness
             })
 
         self.total_duration_ms = times_ms[-1] if len(times_ms) > 0 else 0
@@ -527,8 +529,7 @@ class LEDVisualizer(QWidget):
         if not pygame.mixer.music.get_busy():
             pygame.mixer.music.play()
         
-        arduino_url = "http://192.168.4.1/ledframes"  # Change to your device's IP
-        self.start_streaming_frames(arduino_url, chunk_size=5)
+        self.start_arduino_mode_streaming()
 
     def toggle_play(self):
         if not self.audio_loaded:
@@ -606,64 +607,47 @@ class LEDVisualizer(QWidget):
         if frame_index >= len(self.frames):
             return
 
-        frame = self.frames[frame_index]["leds"]
-
-        for y in range(LED_ROWS):
-            for x in range(LED_COLS):
-                led = frame[y][x]
-                
-                # Normalize alpha: 25 (your threshold) = 255 (full brightness)
-                alpha_normalized = min(255, int(led.get('a', 255) * 255 / 25))
-                
-                # Apply alpha normalization to RGB values as well
-                brightness_scale = alpha_normalized / 255.0
-                r = int(led["r"] * brightness_scale)
-                g = int(led["g"] * brightness_scale)
-                b = int(led["b"] * brightness_scale)
-                
-                color = QColor(r, g, b, 255)  # Use full alpha for display
-                rect_x = int(x * cell_w)
-                rect_y = int(y * cell_h)
-                painter.fillRect(rect_x, rect_y, int(cell_w), int(cell_h), color)
-
-                if self.selected_led == (y, x):
-                    painter.setPen(Qt.GlobalColor.black)
-                    painter.drawRect(rect_x, rect_y, int(cell_w), int(cell_h))
+        frame = self.frames[frame_index]
+        
+        # Display mode information instead of LED array
+        mode = frame["mode"]
+        blink_interval = frame["blink_interval"]
+        brightness = frame["brightness"]
+        
+        # Create a simple visualization based on mode
+        mode_colors = {
+            1: QColor(255, 255, 255),  # White
+            2: QColor(255, 100, 100),  # Red
+            3: QColor(100, 255, 100),  # Green
+            4: QColor(100, 100, 255),  # Blue
+            5: QColor(255, 255, 100),  # Yellow
+            6: QColor(255, 100, 255),  # Magenta
+            7: QColor(100, 255, 255),  # Cyan
+            8: QColor(255, 150, 100)   # Orange
+        }
+        
+        color = mode_colors.get(mode, QColor(128, 128, 128))
+        brightness_scale = brightness / 255.0
+        color.setRed(int(color.red() * brightness_scale))
+        color.setGreen(int(color.green() * brightness_scale))
+        color.setBlue(int(color.blue() * brightness_scale))
+        
+        # Fill the entire display area with the mode color
+        painter.fillRect(0, 0, w, h, color)
+        
+        # Display mode information
+        painter.setPen(Qt.GlobalColor.black)
+        painter.setFont(painter.font())
+        info_text = f"Mode: {mode} | Interval: {blink_interval}ms | Brightness: {brightness}"
+        painter.drawText(10, 20, info_text)
 
     def mousePressEvent(self, event):
-        if not self.frames:
-            return
-
-        w = self.width()
-        h = self.height() - 150
-        cell_w = w / LED_COLS
-        cell_h = h / LED_ROWS
-
-        x = int(event.position().x())
-        y = int(event.position().y())
-
-        col = int(x / cell_w)
-        row = int(y / cell_h)
-
-        if 0 <= row < LED_ROWS and 0 <= col < LED_COLS:
-            self.selected_led = (row, col)
-            self.edit_led_color_and_alpha(row, col)
+        # No longer needed since we don't have individual LED editing
+        pass
 
     def edit_led_color_and_alpha(self, row, col):
-        frame_index = self.slider.value()
-        if frame_index >= len(self.frames):
-            return
-
-        led = self.frames[frame_index]["leds"][row][col]
-        current_color = QColor(led["r"], led["g"], led["b"], led.get('a', 255))
-
-        dialog = ColorAlphaDialog(self, initial_color=current_color, initial_alpha=led.get('a', 255))
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            led["r"] = dialog.color.red()
-            led["g"] = dialog.color.green()
-            led["b"] = dialog.color.blue()
-            led['a'] = dialog.alpha
-            self.update()
+        # No longer needed since we don't have individual LED editing
+        pass
 
     def save_frames(self):
         if not self.frames:
@@ -682,107 +666,117 @@ class LEDVisualizer(QWidget):
         except Exception as e:
             self.label.setText(f"Error saving frames: {e}")
 
-    def start_streaming_frames(self, url, chunk_size=5):
-        print("Starting to stream frames to device...")
-        print("Connecting to WebSocket...")
-        ws = websocket.create_connection(ESP32_WS_URL)
-
-        def send_frames(frames):
-            try:
-                # Each LED has its own blinking rate, no global frequency needed
-                data = {
-                    "frames": frames,
-                    "tempo_bpm": self.tempo
-                }
-                json_data = json.dumps(data)
-                ws.send(json_data)
-            except Exception as e:
-                print("Failed to send frames:", e)
-
-        # Calculate frame timing based on actual audio duration
-        total_duration_ms = self.frames[-1]["time"] if self.frames else 0
-        frame_interval_ms = total_duration_ms / len(self.frames) if len(self.frames) > 0 else 50
+    def calculate_arduino_mode(self, frame_leds, frame_index, mood_intensity, tempo):
+        """Calculate Arduino mode (1-8) based on audio analysis and LED pattern"""
+        if not frame_leds:
+            return 1, 50, 100  # Default mode, interval, brightness
         
-        print(f"Total duration: {total_duration_ms}ms, {len(self.frames)} frames")
-        print(f"Frame interval: {frame_interval_ms:.2f}ms")
-
-        for i in range(0, len(self.frames), chunk_size):
-            if self.stream_button.text() == "Stream Frames to Device":
-                print("Streaming stopped by user.")
-                ws.close()
-                return
-                
-            if i + chunk_size > len(self.frames):
-                chunk_size = len(self.frames) - i
-
-            frames = self.frames[i:i+chunk_size]
-            print(f"Sending chunk {i//chunk_size + 1}: {len(frames)} frames")
-
-            if not frames:
-                print("No frames to send.")
-                return
-            
-            # Each LED has its own blinking rate
-            total_leds = sum(len(frame["leds"]) * len(frame["leds"][0]) for frame in frames)
-            active_leds = sum(1 for frame in frames for row in frame["leds"] for led in row if led.get("blink_rate_hz", 0) > 0)
-            print(f"Chunk: {active_leds}/{total_leds} LEDs active with individual blinking rates")
-                
-            send_frames(frames)
-            
-            # Calculate sleep time based on actual frame timing
-            chunk_duration_ms = frame_interval_ms * chunk_size
-            sleep_time = chunk_duration_ms / 1000.0  # Convert to seconds
-            
-            # Add small buffer to account for network latency
-            sleep_time = max(0.01, sleep_time * 0.95)
-            time.sleep(sleep_time)
-
-        print("Streaming completed.")
-        ws.close()
-
-    def calculate_chunk_frequency(self, frames, chunk_start, chunk_size):
-        """Calculate the optimal frequency for brain entrainment based on frames"""
-        if not frames:
-            return 10.0  # Default frequency
-        
-        # Analyze the frames to determine pattern characteristics
+        # Analyze LED activity
         total_leds = 0
         active_leds = 0
         brightness_sum = 0
+        edge_leds = 0
         
-        for frame in frames:
-            for row in frame["leds"]:
-                for led in row:
-                    total_leds += 1
-                    if led["a"] > 0:  # Active LED
-                        active_leds += 1
-                        brightness_sum += led["a"]
+        for row_idx, row in enumerate(frame_leds):
+            for col_idx, led in enumerate(row):
+                total_leds += 1
+                if led["a"] > 0:
+                    active_leds += 1
+                    brightness_sum += led["a"]
+                    # Check if it's an edge LED
+                    if col_idx == 0 or col_idx == 15:
+                        edge_leds += 1
         
-        # Calculate activity ratio and average brightness
         activity_ratio = active_leds / total_leds if total_leds > 0 else 0
         avg_brightness = brightness_sum / active_leds if active_leds > 0 else 0
+        edge_ratio = edge_leds / max(1, active_leds)
         
-        # Base frequency on activity and brightness
-        base_freq = 8.0  # Alpha frequency as default
+        # Calculate blink interval based on tempo and mood
+        base_interval = max(20, min(100, int(60000 / tempo)))  # BPM to ms, max 100ms
+        mood_factor = 0.5 + mood_intensity * 1.5  # 0.5x to 2.0x
+        blink_interval = int(base_interval * mood_factor)
+        blink_interval = min(100, blink_interval)  # Ensure maximum 100ms
         
-        if activity_ratio > 0.8 and avg_brightness > 20:
-            # High activity and brightness - use beta/gamma for focus/alertness
-            base_freq = 15.0 + (avg_brightness / 30.0) * 10.0  # 15-25 Hz
+        # Calculate brightness (0-255)
+        brightness = int(min(255, avg_brightness * 255 / 30))
+        
+        # Determine mode based on pattern characteristics
+        if activity_ratio > 0.8:
+            # High activity - use mode 1 (full strip flash) or mode 2 (color transition)
+            mode = 1 if mood_intensity < 0.5 else 2
+        elif edge_ratio > 0.3:
+            # Edge-focused pattern - use mode 3 (edge only)
+            mode = 3
         elif activity_ratio > 0.5:
-            # Moderate activity - use alpha for relaxation
-            base_freq = 8.0 + (avg_brightness / 30.0) * 5.0  # 8-13 Hz
+            # Moderate activity - use mode 4 (expanding) or mode 5 (center out)
+            mode = 4 if frame_index % 2 == 0 else 5
+        elif activity_ratio > 0.2:
+            # Low activity - use mode 6 (moving dot) or mode 7 (row toggle)
+            mode = 6 if mood_intensity > 0.5 else 7
         else:
-            # Low activity - use theta for meditation
-            base_freq = 4.0 + (avg_brightness / 30.0) * 4.0  # 4-8 Hz
+            # Very low activity - use mode 8 (snake)
+            mode = 8
         
-        # Adjust based on tempo
-        tempo_factor = min(2.0, max(0.5, self.tempo / 120.0))
-        final_freq = base_freq * tempo_factor
+        return mode, blink_interval, brightness
+
+    def send_arduino_mode(self, mode, blink_interval, brightness):
+        """Send mode data to Arduino in the expected format"""
+        try:
+            message = f"{mode};{blink_interval};{brightness}"
+            print(f"Sending Arduino mode: {message}")
+            self.ws.send(message)
+        except Exception as e:
+            print(f"Failed to send mode: {e}")
+
+    def start_arduino_mode_streaming(self):
+        """Stream Arduino modes based on audio analysis"""
+        print("Starting Arduino mode streaming...")
+        print("Connecting to WebSocket...")
         
-        # Ensure frequency is within safe brain entrainment range
-        final_freq = max(1.0, min(30.0, final_freq))
-        
-        return final_freq
+        try:
+            self.ws = websocket.create_connection(ESP32_WS_URL)
+            print("Connected to Arduino!")
+            
+            # Calculate frame interval
+            total_duration_ms = self.frames[-1]["time"] if self.frames else 0
+            frame_interval_ms = total_duration_ms / len(self.frames) if len(self.frames) > 0 else 50
+            
+            print(f"Total duration: {total_duration_ms}ms, {len(self.frames)} frames")
+            print(f"Frame interval: {frame_interval_ms:.2f}ms")
+            
+            for i, frame in enumerate(self.frames):
+                if self.stream_button.text() == "Stream Frames to Device":
+                    print("Streaming stopped by user.")
+                    self.ws.close()
+                    return
+                
+                # Extract mode data from simplified frame
+                mode = frame["mode"]
+                blink_interval = frame["blink_interval"]
+                brightness = frame["brightness"]
+                
+                # Send mode to Arduino
+                self.send_arduino_mode(mode, blink_interval, brightness)
+                
+                # Add delay to prevent buffer overflow
+                # Wait for the blink interval duration plus some buffer time
+                sleep_time = (blink_interval / 1000.0) + 0.05  # Add 50ms buffer
+                sleep_time = max(0.1, sleep_time)  # Minimum 100ms between sends
+                time.sleep(sleep_time)
+            
+            print("Arduino mode streaming completed.")
+            self.ws.close()
+            
+        except Exception as e:
+            print(f"Arduino streaming error: {e}")
+            if hasattr(self, 'ws'):
+                self.ws.close()
+
+    def get_mood_at_frame(self, frame_index):
+        """Get mood intensity for a specific frame"""
+        if hasattr(self, 'frame_moods') and frame_index < len(self.frame_moods):
+            return self.frame_moods[frame_index]
+        return 0.5  # Default mood if not available
 
     def calculate_led_blinking_rate(self, led_data, frame_index, mood_intensity, row, col):
         """Calculate blinking rate for individual LED based on its properties and position"""
