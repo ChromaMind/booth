@@ -3,26 +3,66 @@ import random
 import json
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QPushButton, QVBoxLayout, QFileDialog,
-    QSlider, QLabel, QColorDialog, QHBoxLayout, QComboBox
+    QSlider, QLabel, QColorDialog, QHBoxLayout, QComboBox, QDialog,
+    QDialogButtonBox
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPainter, QColor
 import pygame
 import threading
 import time
-import requests
 import librosa
 import websocket
 
 ESP32_WS_URL = "ws://10.151.240.37:81"
 
-# Configuration
-NUM_FRAMES = 10
-NUM_PIXELS = 32
-DELAY_BETWEEN_SENDS = 1  # seconds
-
 LED_ROWS = 2
 LED_COLS = 16
+
+
+class ColorAlphaDialog(QDialog):
+    def __init__(self, parent=None, initial_color=QColor(255, 255, 255), initial_alpha=100):
+        super().__init__(parent)
+        self.setWindowTitle("Select LED Color and Amplification")
+
+        self.color = initial_color
+        self.alpha = initial_alpha
+
+        self.color_button = QPushButton("Choose Color")
+        self.color_button.clicked.connect(self.choose_color)
+
+        self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.alpha_slider.setMinimum(0)
+        self.alpha_slider.setMaximum(255)
+        self.alpha_slider.setValue(self.alpha)
+        self.alpha_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.alpha_slider.setTickInterval(25)
+
+        self.alpha_label = QLabel(f"Amplification (Alpha): {self.alpha}")
+
+        self.alpha_slider.valueChanged.connect(self.update_alpha_label)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.color_button)
+        layout.addWidget(self.alpha_label)
+        layout.addWidget(self.alpha_slider)
+        layout.addWidget(buttons)
+        self.setLayout(layout)
+
+    def choose_color(self):
+        color = QColorDialog.getColor(self.color, self, "Select LED Color")
+        if color.isValid():
+            self.color = color
+
+    def update_alpha_label(self, value):
+        self.alpha = value
+        self.alpha_label.setText(f"Amplification (Alpha): {value}")
 
 
 class LEDVisualizer(QWidget):
@@ -37,8 +77,6 @@ class LEDVisualizer(QWidget):
         self.selected_led = None
         self.playback_speed = 1.0
         self.tempo = 0.0
-        self.streaming_thread = None
-        self.streaming_stop_event = threading.Event()
 
         self.label = QLabel("Upload an MP3 file")
         self.upload_button = QPushButton("Upload MP3")
@@ -115,7 +153,6 @@ class LEDVisualizer(QWidget):
         print("Detecting tempo and beats...")
         tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
 
-        # Convert tempo to float if it's an array
         if hasattr(tempo, '__len__') and not isinstance(tempo, str):
             tempo = float(tempo[0])
         self.tempo = tempo
@@ -132,7 +169,7 @@ class LEDVisualizer(QWidget):
                 [{"r": random.randint(0, 255),
                   "g": random.randint(0, 255),
                   "b": random.randint(0, 255),
-                  'a': random.randint(0,100)}
+                  'a': random.randint(0, 255)}
                  for _ in range(LED_COLS)]
                 for _ in range(LED_ROWS)
             ]
@@ -149,20 +186,14 @@ class LEDVisualizer(QWidget):
             return
 
         if self.stream_button.text() == "Stop Streaming":
-            self.streaming_stop_event.set()  # signal thread to stop
             self.stream_button.setText("Stream Frames to Device")
-            self.label.setText("Stopping streaming...")
+            self.label.setText("Streaming stopped.")
             return
 
-        # Clear stop event and start streaming thread
-        self.streaming_stop_event.clear()
         self.stream_button.setText("Stop Streaming")
-        self.label.setText("Streaming frames to device...")
-    
-        # Start streaming in background thread
-        self.streaming_thread = threading.Thread(target=self.start_streaming_frames, args=(ESP32_WS_URL, 10))
-        self.streaming_thread.start()
+        arduino_url = "http://192.168.4.1/ledframes"  # Change to your device's IP
 
+        self.start_streaming_frames(arduino_url, chunk_size=10)
 
     def toggle_play(self):
         if not self.audio_loaded:
@@ -245,7 +276,7 @@ class LEDVisualizer(QWidget):
         for y in range(LED_ROWS):
             for x in range(LED_COLS):
                 led = frame[y][x]
-                color = QColor(led["r"], led["g"], led["b"])
+                color = QColor(led["r"], led["g"], led["b"], led.get('a', 255))
                 rect_x = int(x * cell_w)
                 rect_y = int(y * cell_h)
                 painter.fillRect(rect_x, rect_y, int(cell_w), int(cell_h), color)
@@ -271,22 +302,22 @@ class LEDVisualizer(QWidget):
 
         if 0 <= row < LED_ROWS and 0 <= col < LED_COLS:
             self.selected_led = (row, col)
-            self.edit_led_color(row, col)
+            self.edit_led_color_and_alpha(row, col)
 
-    def edit_led_color(self, row, col):
+    def edit_led_color_and_alpha(self, row, col):
         frame_index = self.slider.value()
         if frame_index >= len(self.frames):
             return
 
         led = self.frames[frame_index]["leds"][row][col]
-        current_color = QColor(led["r"], led["g"], led["b"])
-        new_color = QColorDialog.getColor(current_color, self, "Select LED Color")
+        current_color = QColor(led["r"], led["g"], led["b"], led.get('a', 255))
 
-        if new_color.isValid():
-            led["r"] = new_color.red()
-            led["g"] = new_color.green()
-            led["b"] = new_color.blue()
-            led['a'] = random.randint(0, 255)  # Add alpha channel for consistency
+        dialog = ColorAlphaDialog(self, initial_color=current_color, initial_alpha=led.get('a', 255))
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            led["r"] = dialog.color.red()
+            led["g"] = dialog.color.green()
+            led["b"] = dialog.color.blue()
+            led['a'] = dialog.alpha
             self.update()
 
     def save_frames(self):
@@ -307,14 +338,9 @@ class LEDVisualizer(QWidget):
             self.label.setText(f"Error saving frames: {e}")
 
     def start_streaming_frames(self, url, chunk_size=10):
-        import websocket
         print("Starting to stream frames to device...")
-        try:
-            ws = websocket.create_connection(url)
-        except Exception as e:
-            self.label.setText(f"WebSocket connection failed: {e}")
-            self.stream_button.setText("Stream Frames to Device")
-            return
+        print("Connecting to WebSocket...")
+        ws = websocket.create_connection(ESP32_WS_URL)
 
         def send_frames(frames):
             try:
@@ -324,30 +350,22 @@ class LEDVisualizer(QWidget):
                 print("Failed to send frames:", e)
 
         for i in range(0, len(self.frames), chunk_size):
-            if self.streaming_stop_event.is_set():
+            if self.stream_button.text() == "Stream Frames to Device":
                 print("Streaming stopped by user.")
-                break
-
+                ws.close()
+                return
             if i + chunk_size > len(self.frames):
                 chunk_size = len(self.frames) - i
 
-            frames_chunk = self.frames[i:i+chunk_size]
-            if not frames_chunk:
-                print("No frames to send.")
-                break
+            frames = self.frames[i:i+chunk_size]
 
-            send_frames(frames_chunk)
-            time.sleep(DELAY_BETWEEN_SENDS)  # your delay
+            if not frames:
+                print("No frames to send.")
+                return
+            send_frames(frames)
+            time.sleep(0.2)
 
         ws.close()
-        print("Streaming finished.")
-        self.label.setText("Streaming finished.")
-        self.stream_button.setText("Stream Frames to Device")
-
-
-
-
-
 
 
 def main():
