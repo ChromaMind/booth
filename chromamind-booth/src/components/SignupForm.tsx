@@ -2,14 +2,61 @@
 
 import { useState } from 'react';
 
+// Mailchimp JSONP submit utility
+const submitToMailchimp = async (
+    email: string,
+    fname: string
+): Promise<{ success: boolean; message: string }> => {
+    try {
+        if (!email || !email.includes('@')) {
+            return { success: false, message: 'Please enter a valid email address' };
+        }
+        const MAILCHIMP_URL =
+            'https://xyz.us3.list-manage.com/subscribe/post-json?u=97f2ad1b066587133d068d6d9&id=17927a0bf7&f_id=0089b6e3f0';
+        return new Promise((resolve) => {
+            const callbackName = `mailchimpCallback_${Date.now()}`;
+            (window as any)[callbackName] = (response: any) => {
+                delete (window as any)[callbackName];
+                if (response.result === 'success') {
+                    resolve({ success: true, message: 'Thank you for subscribing!' });
+                } else {
+                    resolve({
+                        success: false,
+                        message: response.msg || 'An error occurred. Please try again.',
+                    });
+                }
+            };
+            const script = document.createElement('script');
+            script.src = `${MAILCHIMP_URL}&EMAIL=${encodeURIComponent(
+                email
+            )}&FNAME=${encodeURIComponent(fname)}&c=${callbackName}`;
+            script.onerror = () => {
+                delete (window as any)[callbackName];
+                resolve({
+                    success: false,
+                    message:
+                        'Failed to connect to the subscription service. Please try again later.',
+                });
+            };
+            document.body.appendChild(script);
+        });
+    } catch (error) {
+        return {
+            success: false,
+            message: 'An error occurred. Please try again later.',
+        };
+    }
+};
+
 export default function SignupForm() {
     const [formData, setFormData] = useState({
-        name: '',
+        FNAME: '',
         email: '',
         acceptTerms: false
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,17 +64,13 @@ export default function SignupForm() {
             alert('Please accept the terms and conditions');
             return;
         }
-
         setIsSubmitting(true);
-
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Here you would typically send to your backend
-        console.log('Form submitted:', formData);
-
+        setSubmitMessage(null);
+        // Send to Mailchimp
+        const result = await submitToMailchimp(formData.email, formData.FNAME);
         setIsSubmitting(false);
-        setIsSubmitted(true);
+        setIsSubmitted(result.success);
+        setSubmitMessage(result.message);
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,6 +92,9 @@ export default function SignupForm() {
                 <div className="bg-purple-600 text-white px-4 py-2 rounded-lg inline-block">
                     <span className="font-bold">Position: #156</span>
                 </div>
+                {submitMessage && (
+                    <div className="mt-4 text-purple-200">{submitMessage}</div>
+                )}
             </div>
         );
     }
@@ -56,14 +102,14 @@ export default function SignupForm() {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label htmlFor="name" className="block text-white text-sm font-medium mb-2">
+                <label htmlFor="FNAME" className="block text-white text-sm font-medium mb-2">
                     Name
                 </label>
                 <input
                     type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
+                    id="FNAME"
+                    name="FNAME"
+                    value={formData.FNAME}
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
@@ -118,6 +164,9 @@ export default function SignupForm() {
                     'Join Waiting List'
                 )}
             </button>
+            {submitMessage && !isSubmitted && (
+                <div className="text-center text-red-300 mt-2">{submitMessage}</div>
+            )}
         </form>
     );
 } 
