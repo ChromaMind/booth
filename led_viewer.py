@@ -15,6 +15,8 @@ import librosa
 import websocket
 import math
 import numpy as np
+import requests
+import os
 
 from patterns import * 
 
@@ -110,6 +112,10 @@ class LEDVisualizer(QWidget):
         self.stream_button.setEnabled(False)
         self.stream_button.clicked.connect(self.on_stream_clicked)
 
+        self.upload_walrus_button = QPushButton("Upload to Walrus")
+        self.upload_walrus_button.setEnabled(False)
+        self.upload_walrus_button.clicked.connect(self.upload_to_walrus)
+
         control_layout = QHBoxLayout()
         control_layout.addWidget(self.upload_button)
         control_layout.addWidget(self.play_button)
@@ -117,6 +123,7 @@ class LEDVisualizer(QWidget):
         control_layout.addWidget(QLabel("Speed:"))
         control_layout.addWidget(self.speed_box)
         control_layout.addWidget(self.stream_button)
+        control_layout.addWidget(self.upload_walrus_button)
 
         layout = QVBoxLayout()
         layout.addWidget(self.label)
@@ -149,6 +156,7 @@ class LEDVisualizer(QWidget):
         self.play_button.setEnabled(True)
         self.save_frames_button.setEnabled(True)
         self.stream_button.setEnabled(True)
+        self.upload_walrus_button.setEnabled(True)
 
         self.audio_loaded = True
         self.update()
@@ -778,6 +786,15 @@ class LEDVisualizer(QWidget):
             return self.frame_moods[frame_index]
         return 0.5  # Default mood if not available
 
+    def json_serializer(self, obj):
+        """Custom JSON serializer to handle numpy types and other non-serializable objects"""
+        if hasattr(obj, 'item'):  # numpy types
+            return obj.item()
+        elif hasattr(obj, 'isoformat'):  # datetime objects
+            return obj.isoformat()
+        else:
+            return str(obj)
+
     def calculate_led_blinking_rate(self, led_data, frame_index, mood_intensity, row, col):
         """Calculate blinking rate for individual LED based on its properties and position"""
         if led_data["a"] == 0:
@@ -805,6 +822,103 @@ class LEDVisualizer(QWidget):
         blinking_rate = max(1.0, min(30.0, blinking_rate))
         
         return blinking_rate
+
+    def upload_to_walrus(self):
+        """Save frames to JSON and upload to Walrus"""
+        if not self.frames:
+            self.label.setText("No frames to upload.")
+            return
+
+        try:
+            # Create a temporary JSON file
+            temp_file = "brain_entrainment_frames.json"
+            
+            # Prepare the data with metadata
+            upload_data = {
+                "metadata": {
+                    "name": "Brain Entrainment Frames",
+                    "description": f"Audio-reactive brain entrainment patterns generated from {self.tempo:.1f} BPM audio",
+                    "total_frames": len(self.frames),
+                    "duration_ms": self.total_duration_ms,
+                    "tempo_bpm": self.tempo,
+                    "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "version": "1.0"
+                },
+                "frames": self.frames
+            }
+            
+            # Save to temporary file with proper JSON serialization
+            with open(temp_file, 'w') as f:
+                json.dump(upload_data, f, indent=2, default=self.json_serializer)
+            
+            self.label.setText("Uploading to Walrus...")
+            
+            # Upload to Walrus
+            upload_response = self.upload_json_to_walrus(temp_file, epochs=10)
+            
+            if upload_response:
+                self.label.setText("Successfully uploaded to Walrus!")
+                
+                # Get the blob ID for access
+                if 'newlyCreated' in upload_response:
+                    blob_id = upload_response['newlyCreated']['blobObject']['blobId']
+                    object_id = upload_response['newlyCreated']['blobObject']['id']
+                    
+                    print(f"\n--- Walrus Upload Successful ---")
+                    print(f"Blob ID: {blob_id}")
+                    print(f"Object ID: {object_id}")
+                    print(f"Access URL: https://aggregator.walrus-testnet.walrus.space/v1/blobs/{blob_id}")
+                    
+                    # Clean up temporary file
+                    os.remove(temp_file)
+                else:
+                    self.label.setText("Upload completed but no blob ID received.")
+            else:
+                self.label.setText("Failed to upload to Walrus.")
+                
+        except Exception as e:
+            self.label.setText(f"Error uploading to Walrus: {e}")
+            print(f"Upload error: {e}")
+
+    def upload_json_to_walrus(self, file_path: str, publisher_url: str = "https://publisher.walrus-testnet.walrus.space", epochs: int = 10):
+        """
+        Uploads a JSON file to a Walrus publisher.
+        """
+        if not os.path.exists(file_path):
+            print(f"Error: File not found at {file_path}")
+            return None
+
+        # Read the content of the JSON file
+        with open(file_path, 'r') as f:
+            try:
+                json_data = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Error: Invalid JSON file at {file_path}")
+                return None
+
+        # The API expects the raw file content in the body
+        with open(file_path, 'rb') as f:
+            file_content = f.read()
+
+        # Construct the full URL with parameters
+        url = f"{publisher_url}/v1/blobs"
+        params = {
+            'epochs': epochs
+        }
+
+        headers = {
+            'Content-Type': 'application/json'
+        }
+
+        try:
+            response = requests.put(url, params=params, data=file_content, headers=headers)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred: {e}")
+            return None
 
 def main():
     app = QApplication(sys.argv)
