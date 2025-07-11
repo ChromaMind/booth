@@ -71,17 +71,6 @@ export default function Home() {
         {/* Bottom Section */}
         <div className="bg-black/20 backdrop-blur-sm border-t border-white/10">
           <div className="container mx-auto px-4 py-16">
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto mb-16">
-              <div className="text-center text-white">
-                <div className="text-4xl font-bold text-purple-400 mb-2">150+</div>
-                <div className="text-purple-200">People in Queue</div>
-              </div>
-              <div className="text-center text-white">
-                <div className="text-4xl font-bold text-purple-400 mb-2">4.9★</div>
-                <div className="text-purple-200">User Rating</div>
-              </div>
-            </div>
 
             {/* Signup Section */}
             <div className="max-w-md mx-auto">
