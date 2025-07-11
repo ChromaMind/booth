@@ -78,10 +78,6 @@ export default function Home() {
                 <div className="text-purple-200">People in Queue</div>
               </div>
               <div className="text-center text-white">
-                <div className="text-4xl font-bold text-purple-400 mb-2">5 min</div>
-                <div className="text-purple-200">Average Wait Time</div>
-              </div>
-              <div className="text-center text-white">
                 <div className="text-4xl font-bold text-purple-400 mb-2">4.9★</div>
                 <div className="text-purple-200">User Rating</div>
               </div>
