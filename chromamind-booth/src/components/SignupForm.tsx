@@ -89,9 +89,6 @@ export default function SignupForm() {
                 <p className="text-purple-200 mb-4">
                     We'll notify you when it's your turn to experience ChromaMind.
                 </p>
-                <div className="bg-purple-600 text-white px-4 py-2 rounded-lg inline-block">
-                    <span className="font-bold">Position: #156</span>
-                </div>
                 {submitMessage && (
                     <div className="mt-4 text-purple-200">{submitMessage}</div>
                 )}
