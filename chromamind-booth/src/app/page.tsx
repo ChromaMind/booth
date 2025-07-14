@@ -43,9 +43,30 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Video Player in Hero Section */}
-          <div className="mb-8 max-w-4xl mx-auto">
-            <VideoPlayer />
+          {/* Video Player and Signup Section */}
+          <div className="mb-8 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              {/* Video Player */}
+              <div className="lg:col-span-2">
+                <VideoPlayer />
+              </div>
+
+              {/* Signup Form */}
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 h-[77.5%] flex flex-col justify-center">
+                <h2 className="text-2xl font-bold text-white mb-6 text-center">
+                  Join the Waiting List
+                </h2>
+                <SignupForm />
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={() => setShowTerms(true)}
+                    className="text-purple-300 hover:text-white text-sm underline"
+                  >
+                    Terms & Conditions
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Feature Cards */}
@@ -67,30 +88,6 @@ export default function Home() {
             </div>
           </div>
         </main>
-
-        {/* Bottom Section */}
-        <div className="bg-black/20 backdrop-blur-sm border-t border-white/10">
-          <div className="container mx-auto px-4 py-16">
-
-            {/* Signup Section */}
-            <div className="max-w-md mx-auto">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                <h2 className="text-2xl font-bold text-white mb-6 text-center">
-                  Join the Waiting List
-                </h2>
-                <SignupForm />
-                <div className="mt-6 text-center">
-                  <button
-                    onClick={() => setShowTerms(true)}
-                    className="text-purple-300 hover:text-white text-sm underline"
-                  >
-                    Terms & Conditions
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Footer */}
         <footer className="container mx-auto px-4 py-8 text-center text-purple-300">
