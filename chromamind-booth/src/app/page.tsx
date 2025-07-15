@@ -31,11 +31,18 @@ export default function Home() {
         {/* Hero Section with Logo and Video */}
         <main className="container mx-auto px-4 py-6 md:py-8">
           <div className="flex flex-col items-center text-center text-white mb-6">
+            {/* Logo on top for mobile */}
+            <div className="block sm:hidden mb-2">
+              <Image src="/logo.png" alt="ChromaMind Logo" width={90} height={90} priority className="inline-block" />
+            </div>
             <div className="flex flex-row items-center justify-center gap-6 w-full mb-4">
+              {/* Logo hidden on mobile, shown on larger screens */}
               <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent whitespace-nowrap">
                 Experience ChromaMind
               </h1>
-              <Image src="/logo.png" alt="ChromaMind Logo" width={90} height={90} priority className="inline-block" />
+              <span className="hidden sm:inline-block">
+                <Image src="/logo.png" alt="ChromaMind Logo" width={90} height={90} priority className="inline-block" />
+              </span>
             </div>
             <p className="text-lg md:text-xl text-purple-200 mb-6 max-w-2xl mx-auto">
               Immerse yourself in the future of audio-visual synchronization.
@@ -45,14 +52,14 @@ export default function Home() {
 
           {/* Video Player and Signup Section */}
           <div className="mb-8 max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            <div className="grid grid-cols-1 gap-8 items-start lg:grid-cols-3">
               {/* Video Player */}
               <div className="lg:col-span-2">
                 <VideoPlayer />
               </div>
 
               {/* Signup Form */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 h-[77.5%] flex flex-col justify-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 h-auto flex flex-col justify-center w-full">
                 <h2 className="text-2xl font-bold text-white mb-6 text-center">
                   Join the Waiting List
                 </h2>
@@ -69,22 +76,33 @@ export default function Home() {
             </div>
           </div>
 
+          {/* How ChromaMind Works Section */}
+          <div className="mt-8 text-center text-white max-w-3xl mx-auto">
+            <h3 className="text-3xl font-bold mb-4">How ChromaMind Works</h3>
+            <p className="text-purple-200 max-w-3xl mx-auto text-lg">
+              Watch how our AI-powered system analyzes audio in real-time and creates
+              synchronized light patterns that respond to the rhythm, tempo, and frequency of your music.
+            </p>
+          </div>
+
           {/* Feature Cards */}
-          <div className="flex flex-wrap justify-center gap-6 mb-12">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-              <div className="text-3xl mb-3">🎵</div>
-              <h3 className="text-lg font-bold text-white mb-2">Real-time Audio Analysis</h3>
-              <p className="text-purple-200 text-sm">Advanced algorithms analyze rhythm, tempo, and frequency</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-              <div className="text-3xl mb-3">✨</div>
-              <h3 className="text-lg font-bold text-white mb-2">AI-Powered Patterns</h3>
-              <p className="text-purple-200 text-sm">Machine learning creates unique light sequences</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-              <div className="text-3xl mb-3">🎨</div>
-              <h3 className="text-lg font-bold text-white mb-2">Customizable Colors</h3>
-              <p className="text-purple-200 text-sm">Personalize your experience with color themes</p>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                <div className="text-3xl mb-3">🎵</div>
+                <h3 className="text-lg font-bold text-white mb-2">Real-time Audio Analysis</h3>
+                <p className="text-purple-200 text-sm">Advanced algorithms analyze rhythm, tempo, and frequency</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                <div className="text-3xl mb-3">✨</div>
+                <h3 className="text-lg font-bold text-white mb-2">AI-Powered Patterns</h3>
+                <p className="text-purple-200 text-sm">Machine learning creates unique light sequences</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                <div className="text-3xl mb-3">🎨</div>
+                <h3 className="text-lg font-bold text-white mb-2">Customizable Colors</h3>
+                <p className="text-purple-200 text-sm">Personalize your experience with color themes</p>
+              </div>
             </div>
           </div>
         </main>
