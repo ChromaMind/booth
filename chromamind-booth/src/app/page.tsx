@@ -37,7 +37,7 @@ export default function Home() {
             </div>
             <div className="flex flex-row items-center justify-center gap-6 w-full mb-4">
               {/* Logo hidden on mobile, shown on larger screens */}
-              <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent whitespace-nowrap">
+              <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Experience ChromaMind
               </h1>
               <span className="hidden sm:inline-block">
