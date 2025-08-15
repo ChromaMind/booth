@@ -1,0 +1,51 @@
+name: Deploy Next.js App
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Next.js app
+        run: pnpm build
+
+      - name: Upload build files to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: ".next,public,package.json,pnpm-lock.yaml"
+          target: /root/Projects/booth/chromamind-booth
+
+      - name: SSH commands to install and restart pm2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST}}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Pass secrets to the remote server script
+          script: |
+            # Navigate to the application directory
+            cd /root/Projects/booth/chromamind-booth
+            
+            # Install production dependencies
+            pnpm install --prod
+            pm2 restart booth || PORT=${{ secrets.PORT}} NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} pm2 start pnpm --name "booth" -- start
+            # Save the pm2 process list
+            pm2 save
+
