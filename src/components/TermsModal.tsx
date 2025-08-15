@@ -47,10 +47,24 @@ export default function TermsModal({ isOpen, onClose }: TermsModalProps) {
                         </section>
 
                         <section>
-                            <h3 className="font-bold text-lg text-gray-900 mb-2">3. Medical Restrictions</h3>
-                            <p className="text-sm leading-relaxed">
-                                <strong>If you have epilepsy, heart conditions, or any medical issues that could be triggered by flashing lights or intense audio-visual experiences, you must not use this device.</strong>
-                            </p>
+                            <h3 className="font-bold text-lg text-gray-900 mb-2">3. Medical Restrictions & Health Risks</h3>
+                            <div className="text-sm leading-relaxed space-y-3">
+                                <p><strong>DO NOT USE THIS DEVICE if you have any of the following conditions:</strong></p>
+                                
+                                <div className="pl-4 space-y-2">
+                                    <p><strong>• Epilepsy or seizure disorders</strong></p>
+                                    <p><strong>• Heart conditions</strong></p>
+                                    <p><strong>• Migraines or severe headaches</strong> - Flickering light (3-70 Hz) can trigger migraines, especially in people with visual aura migraines or photophobia</p>
+                                    <p><strong>• Eye strain or recent eye surgery</strong> - Bright LED exposure can cause afterimages, blurred vision, and retinal overstimulation</p>
+                                    <p><strong>• Sleep disorders or circadian rhythm issues</strong> - Bright light, especially blue spectrum, can suppress melatonin and disrupt sleep</p>
+                                    <p><strong>• Anxiety, panic attacks, or psychiatric conditions</strong> - Gamma-band stimulation (40 Hz) may increase anxiety or worsen certain conditions</p>
+                                    <p><strong>• Vestibular disorders or motion sensitivity</strong> - Rapid light changes can cause vertigo, nausea, or disorientation</p>
+                                    <p><strong>• PTSD or trauma history</strong> - Strong sensory immersion may trigger flashbacks or dissociation</p>
+                                    <p><strong>• Retinal diseases</strong> - Including retinitis pigmentosa, macular degeneration, or recent ocular procedures</p>
+                                </div>
+                                
+                                <p className="mt-3"><strong>Blue light or high-intensity white light can be particularly problematic for sensitive individuals.</strong></p>
+                            </div>
                         </section>
 
                         <section>
@@ -63,9 +77,20 @@ export default function TermsModal({ isOpen, onClose }: TermsModalProps) {
 
                         <section>
                             <h3 className="font-bold text-lg text-gray-900 mb-2">5. Liability & Personal Responsibility</h3>
-                            <p className="text-sm leading-relaxed">
-                                <strong>All use is at your own risk. Any injury, damage, or loss is your sole responsibility. ChromaMind and its representatives are not liable for any injuries, damages, or losses that may occur during the use of the device. Users participate at their own risk and should follow all safety instructions provided.</strong>
-                            </p>
+                            <div className="text-sm leading-relaxed space-y-2">
+                                <p><strong>All use is at your own risk. Any injury, damage, or loss is your sole responsibility.</strong></p>
+                                <p>ChromaMind and its representatives are not liable for any injuries, damages, or losses that may occur during the use of the device, including but not limited to:</p>
+                                <ul className="pl-4 space-y-1">
+                                    <li>&bull; Migraine or headache induction</li>
+                                    <li>&bull; Eye strain or visual fatigue</li>
+                                    <li>&bull; Sleep disruption or circadian rhythm changes</li>
+                                    <li>&bull; Anxiety, agitation, or overstimulation</li>
+                                    <li>&bull; Vertigo, nausea, or disorientation</li>
+                                    <li>&bull; Psychological distress or trauma responses</li>
+                                    <li>&bull; Aggravation of existing medical conditions</li>
+                                </ul>
+                                <p className="mt-2">Users participate at their own risk and should follow all safety instructions provided. If you experience any adverse effects, stop using the device immediately.</p>
+                            </div>
                         </section>
 
                         <section>

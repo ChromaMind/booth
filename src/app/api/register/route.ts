@@ -13,12 +13,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        console.log('Attempting to insert user:', { email, FNAME });
+
         // Check if user already exists
-        const { data: existingUser } = await supabase
+        const { data: existingUser, error: checkError } = await supabase
             .from('waitlist')
             .select('id')
             .eq('email', email)
             .single();
+
+        if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.error('Error checking existing user:', checkError);
+            return NextResponse.json(
+                { error: 'Failed to check existing user' },
+                { status: 500 }
+            );
+        }
 
         if (existingUser) {
             return NextResponse.json(
@@ -41,12 +51,14 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error) {
-            console.error('Supabase error:', error);
+            console.error('Supabase insert error:', error);
             return NextResponse.json(
-                { error: 'Failed to register user' },
+                { error: 'Failed to register user', details: error.message },
                 { status: 500 }
             );
         }
+
+        console.log('Successfully inserted user:', data);
 
         return NextResponse.json({
             success: true,
@@ -57,7 +69,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Registration error:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

@@ -45,7 +45,7 @@ jobs:
             
             # Install production dependencies
             pnpm install --prod
-            pm2 restart booth || PORT=${{ secrets.PORT}} NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} pm2 start pnpm --name "booth" -- start
+            pm2 restart booth || PORT=${{ secrets.PORT}} NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} pm2 start pnpm --name "booth" -- start
             # Save the pm2 process list
             pm2 save
 
