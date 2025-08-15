@@ -41,7 +41,7 @@ const registerUser = async (
 
 export default function SignupForm() {
     const [formData, setFormData] = useState({
-        FNAME: '',
+        FNAME: 'anon',
         email: '',
         acceptTerms: false
     });
@@ -59,7 +59,7 @@ export default function SignupForm() {
         setSubmitMessage(null);
         
         // Send to our API
-        const result = await registerUser(formData.email, formData.FNAME);
+        const result = await registerUser(formData.email, 'anon');
         setIsSubmitting(false);
         setIsSubmitted(result.success);
         setSubmitMessage(result.message);
@@ -90,21 +90,21 @@ export default function SignupForm() {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                <label htmlFor="FNAME" className="block text-white text-sm font-medium mb-2">
-                    Name
-                </label>
-                <input
-                    type="text"
-                    id="FNAME"
-                    name="FNAME"
-                    value={formData.FNAME}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-                    placeholder="Enter your name"
-                />
-            </div>
+            {/*<div>*/}
+            {/*    <label htmlFor="FNAME" className="block text-white text-sm font-medium mb-2">*/}
+            {/*        Name*/}
+            {/*    </label>*/}
+            {/*    <input*/}
+            {/*        type="text"*/}
+            {/*        id="FNAME"*/}
+            {/*        name="FNAME"*/}
+            {/*        value={formData.FNAME}*/}
+            {/*        onChange={handleInputChange}*/}
+            {/*        required*/}
+            {/*        className="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/30 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"*/}
+            {/*        placeholder="Enter your name"*/}
+            {/*    />*/}
+            {/*</div>*/}
 
             <div>
                 <label htmlFor="email" className="block text-white text-sm font-medium mb-2">
