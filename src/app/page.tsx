@@ -4,6 +4,9 @@ import { useState } from 'react';
 import SignupForm from '@/components/SignupForm';
 import TermsModal from '@/components/TermsModal';
 import VideoPlayer from '@/components/VideoPlayer';
+import Gallery from '@/components/Gallery';
+import FeatureCards from '@/components/FeatureCards';
+import HowItWorks from '@/components/HowItWorks';
 import Image from 'next/image';
 
 export default function Home() {
@@ -76,34 +79,19 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Gallery Section */}
+          <div className="max-w-7xl mx-auto mt-8 mb-16">
+            <Gallery />
+          </div>
+
           {/* How ChromaMind Works Section */}
-          <div className="mt-8 text-center text-white max-w-3xl mx-auto">
-            <h3 className="text-3xl font-bold mb-4">How ChromaMind Works</h3>
-            <p className="text-purple-200 max-w-3xl mx-auto text-lg">
-              Watch how our AI-powered system analyzes audio in real-time and creates
-              synchronized light patterns that respond to the rhythm, tempo, and frequency of your music.
-            </p>
+          <div className="mt-8 mb-12">
+            <HowItWorks />
           </div>
 
           {/* Feature Cards */}
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="text-3xl mb-3">🎵</div>
-                <h3 className="text-lg font-bold text-white mb-2">Real-time Audio Analysis</h3>
-                <p className="text-purple-200 text-sm">Advanced algorithms analyze rhythm, tempo, and frequency</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="text-3xl mb-3">✨</div>
-                <h3 className="text-lg font-bold text-white mb-2">AI-Powered Patterns</h3>
-                <p className="text-purple-200 text-sm">Machine learning creates unique light sequences</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
-                <div className="text-3xl mb-3">🎨</div>
-                <h3 className="text-lg font-bold text-white mb-2">Customizable Colors</h3>
-                <p className="text-purple-200 text-sm">Personalize your experience with color themes</p>
-              </div>
-            </div>
+          <div className="mt-8">
+            <FeatureCards />
           </div>
         </main>
 
