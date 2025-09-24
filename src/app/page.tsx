@@ -67,6 +67,24 @@ export default function Home() {
                   Join the Waiting List
                 </h2>
                 <SignupForm />
+                
+                {/* Feedback Incentive */}
+                <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm rounded-xl border border-purple-400/30">
+                  <div className="text-center">
+                    <div className="text-2xl mb-2">🎁</div>
+                    <h4 className="text-white font-semibold mb-2">Want a Free ChromaMind Device?</h4>
+                    <p className="text-purple-200 text-sm mb-3">
+                      Share your feedback about our VR meditation experience and enter our EthSofia raffle!
+                    </p>
+                    <button
+                      onClick={() => window.open('https://docs.google.com/forms/d/e/1FAIpQLSeJ8XOWynkUco87CeANKhJBDDR0UipNeu-7ULqiAUuBhU270A/viewform?usp=dialog', '_blank', 'noopener,noreferrer')}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all duration-300 transform hover:scale-105"
+                    >
+                      📝 Give Feedback & Enter Raffle
+                    </button>
+                  </div>
+                </div>
+
                 <div className="mt-6 text-center">
                   <button
                     onClick={() => setShowTerms(true)}
